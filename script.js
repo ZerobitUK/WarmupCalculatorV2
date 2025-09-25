@@ -213,7 +213,6 @@
 
     sets.forEach(s=>{
       const tr = document.createElement('tr');
-      // *** MODIFIED: Add 'work-set' class to the work set row ***
       if (s.pct === 'Work Set') {
         tr.classList.add('work-set');
       }
@@ -244,22 +243,33 @@
     DOM.deloadDisplay.textContent = deload.toFixed(1);
   }
 
+  // *** MODIFIED: This function now also updates the button labels ***
   function enforcePlateAndStep(){
     const plates = getSelectedPlates();
     const inc = smallestPairIncrement(plates) || 0.5; // fallback
+    const incFormatted = parseFloat(inc.toFixed(2)); // Format for display
+    
+    // Update input step for browser controls
     DOM.desiredWeightInput.step = inc.toString();
     
+    // Update button text and accessibility labels
+    DOM.decBtn.textContent = `−${incFormatted} kg`;
+    DOM.decBtn.setAttribute('aria-label', `Decrease weight by ${incFormatted} kilograms`);
+    DOM.incBtn.textContent = `+${incFormatted} kg`;
+    DOM.incBtn.setAttribute('aria-label', `Increase weight by ${incFormatted} kilograms`);
+
+    // Snap the current value if the input is not empty
     if (DOM.desiredWeightInput.value.trim() === '') return;
 
     let dw = parseFloat(DOM.desiredWeightInput.value) || barbellWeight;
     const snapped = snapTotalToIncrement(dw, inc);
     if (Math.abs(snapped - dw) > 1e-9){
       DOM.desiredWeightInput.value = snapped.toFixed(1);
-      // *** NEW: Add visual cue for snapping ***
+      // Add visual cue for snapping
       DOM.desiredWeightInput.classList.add('snapped');
       setTimeout(() => {
         DOM.desiredWeightInput.classList.remove('snapped');
-      }, 500); // Duration should match the animation
+      }, 500); // Duration should match the animation in CSS
     }
   }
 
@@ -356,7 +366,7 @@
     saveCurrentExerciseState();
   });
 
-
+  // Event listeners now use the input's step attribute, which is kept up-to-date
   DOM.incBtn.addEventListener('click', () => {
     const inc = parseFloat(DOM.desiredWeightInput.step) || 0.5;
     let val = parseFloat(DOM.desiredWeightInput.value) || barbellWeight;
