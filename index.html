@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Will's 5x5 Warmup Calculator</title>
+  <meta name="description" content="StrongLifts-style warmup & work-set calculator with plate breakdowns." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="container" aria-labelledby="title">
+  <h1 id="title">Will's 5x5 Warmup Calculator</h1>
+
+  <section aria-label="Workout Inputs">
+    <form id="workoutForm" onsubmit="return false;">
+      <label for="exercise">Select Exercise</label>
+      <select id="exercise" name="exercise" aria-label="Select Exercise">
+        <option value="squat">Squat</option>
+        <option value="bench">Bench Press</option>
+        <option value="overhead">Overhead Press</option>
+        <option value="row">Barbell Row</option>
+        <option value="deadlift">Deadlift</option>
+      </select>
+
+      <label for="desiredWeight">Work Set Weight (kg)</label>
+      <input type="number" id="desiredWeight" name="desiredWeight" inputmode="decimal" step="any" required aria-describedby="weightHelp" autocomplete="off">
+
+      <div id="weightHelp" class="note">Snaps to the smallest selected plate pair.</div>
+
+      <div class="computed-weight" aria-live="polite">
+        <span>-10% Weight (Deload): <strong id="minus10PercentWeight">0.0</strong> kg</span>
+      </div>
+
+      <div class="adjust-buttons">
+        <button type="button" id="decreaseWeight" aria-label="Decrease weight by 0.5 kilograms">-0.5 kg</button>
+        <button type="button" id="increaseWeight" aria-label="Increase weight by 0.5 kilograms">+0.5 kg</button>
+      </div>
+
+      <fieldset>
+        <legend>Available Plates (per side, kg)</legend>
+        <div class="plate-checkbox-grid" id="plateGrid">
+          <label class="plate-checkbox"><input type="checkbox" value="25">25</label>
+          <label class="plate-checkbox"><input type="checkbox" value="20">20</label>
+          <label class="plate-checkbox"><input type="checkbox" value="15">15</label>
+          <label class="plate-checkbox"><input type="checkbox" value="10">10</label>
+          <label class="plate-checkbox"><input type="checkbox" value="5">5</label>
+          <label class="plate-checkbox"><input type="checkbox" value="2.5">2.5</label>
+          <label class="plate-checkbox"><input type="checkbox" value="1.25">1.25</label>
+          <label class="plate-checkbox"><input type="checkbox" value="1">1</label>
+          <label class="plate-checkbox"><input type="checkbox" value="0.75">0.75</label>
+          <label class="plate-checkbox"><input type="checkbox" value="0.5">0.5</label>
+          <label class="plate-checkbox"><input type="checkbox" value="0.25">0.25</label>
+        </div>
+        <div class="adjust-buttons">
+          <button type="button" id="selectAllPlates">Select All</button>
+          <button type="button" id="resetPlates">Reset Plates</button>
+        </div>
+      </fieldset>
+    </form>
+  </section>
+
+  <section aria-label="Warmup & Work Sets">
+    <div id="status" class="status" aria-live="polite"></div>
+    <div class="warmup-tip">
+      <strong>Tip:</strong> Remember to perform a 5-10 minute general warmup (light cardio, dynamic stretches) before starting your sets.
+    </div>
+    <div id="warmupRegion" aria-live="polite"></div>
+  </section>
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>
