@@ -242,8 +242,8 @@
     const deload = Math.max(0, desired * 0.9);
     DOM.deloadDisplay.textContent = deload.toFixed(1);
   }
-
-  // *** MODIFIED: This function now also updates the button labels ***
+  
+  // *** CORRECTED: This function now properly updates the button's visible text ***
   function enforcePlateAndStep(){
     const plates = getSelectedPlates();
     const inc = smallestPairIncrement(plates) || 0.5; // fallback
