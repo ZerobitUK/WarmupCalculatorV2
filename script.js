@@ -365,7 +365,12 @@
   }
 
   // ---------- Events ----------
-  DOM.exerciseSelect.addEventListener('change', () => { loadExerciseState(); trigger(); });
+  // UPDATED: Now resets the set counter on change
+  DOM.exerciseSelect.addEventListener('change', () => { 
+    loadExerciseState(); 
+    updateSetCounter(0); // Reset counter to 0
+    trigger(); 
+  });
   
   DOM.desiredWeightInput.addEventListener('input', debounce(() => {
     updateAll();
@@ -438,7 +443,7 @@
     DOM.timerDisplay.classList.remove('timer-active');
   }
 
-  // UPDATED: Now uses the service worker
+  // UPDATED: Added more notification options
   async function showNotification() {
     if (Notification.permission !== 'granted' || !navigator.serviceWorker) {
       return;
@@ -447,7 +452,9 @@
       const reg = await navigator.serviceWorker.ready;
       await reg.showNotification('Rest period over!', {
         body: 'Time to start your next set.',
-        icon: 'favicon.ico' // Note: This file doesn't exist yet
+        icon: 'favicon.ico',
+        vibrate: [200, 100, 200], // Vibrate for 200ms, pause for 100ms, then vibrate for 200ms
+        tag: 'warmup-timer-notification' // A unique tag to prevent multiple notifications
       });
     } catch (err) {
       console.error('Notification error:', err);
@@ -487,7 +494,6 @@
 
   DOM.stopTimerBtn.addEventListener('click', stopTimer);
 
-  // UPDATED: Now part of the init() function
   async function setupNotifications() {
     if (!('Notification' in window) || !('serviceWorker' in navigator)) {
       console.warn('Notifications or Service Workers not supported.');
@@ -505,7 +511,6 @@
     }
   }
 
-
   // ---------- Init ----------
   (function init(){
     exercises.forEach(ex=>{
@@ -515,7 +520,7 @@
     });
     loadExerciseState();
     updateSetCounter(parseInt(DOM.setCount.textContent, 10));
-    setupNotifications(); // Replaces the old requestNotificationPermission()
+    setupNotifications();
     trigger();
   })();
 })();
