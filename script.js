@@ -15,7 +15,13 @@
     resetPlatesBtn: document.getElementById('resetPlates'),
     deloadDisplay: document.getElementById('minus10PercentWeight'),
     statusEl: document.getElementById('status'),
-    warmupRegion: document.getElementById('warmupRegion')
+    warmupRegion: document.getElementById('warmupRegion'),
+    setCount: document.getElementById('setCount'),
+    increaseSetBtn: document.getElementById('increaseSet'),
+    decreaseSetBtn: document.getElementById('decreaseSet'),
+    timerDisplay: document.getElementById('timerDisplay'),
+    startTimerBtn: document.getElementById('startTimer'),
+    stopTimerBtn: document.getElementById('stopTimer')
   };
 
   // Utility: debounce
@@ -30,7 +36,7 @@
     ['25','20','15','10','5','2.5','1.25','1','0.75','0.5','0.25'].forEach(p=>{
       plates[p] = defaultPlates.includes(p);
     });
-    return { lastWeight: 20, plates };
+    return { lastWeight: 20, plates, currentSet: 1 };
   }
   function loadState(ex){
     try{
@@ -40,6 +46,7 @@
       // backward-safe defaults
       if(typeof obj.lastWeight !== 'number') obj.lastWeight = 20;
       if(!obj.plates) obj.plates = defaultState().plates;
+      if(typeof obj.currentSet !== 'number') obj.currentSet = 1;
       return obj;
     }catch{ return defaultState(); }
   }
@@ -243,33 +250,28 @@
     DOM.deloadDisplay.textContent = deload.toFixed(1);
   }
   
-  // *** CORRECTED: This function now properly updates the button's visible text ***
   function enforcePlateAndStep(){
     const plates = getSelectedPlates();
     const inc = smallestPairIncrement(plates) || 0.5; // fallback
     const incFormatted = parseFloat(inc.toFixed(2)); // Format for display
     
-    // Update input step for browser controls
     DOM.desiredWeightInput.step = inc.toString();
     
-    // Update button text and accessibility labels
     DOM.decBtn.textContent = `−${incFormatted} kg`;
     DOM.decBtn.setAttribute('aria-label', `Decrease weight by ${incFormatted} kilograms`);
     DOM.incBtn.textContent = `+${incFormatted} kg`;
     DOM.incBtn.setAttribute('aria-label', `Increase weight by ${incFormatted} kilograms`);
 
-    // Snap the current value if the input is not empty
     if (DOM.desiredWeightInput.value.trim() === '') return;
 
     let dw = parseFloat(DOM.desiredWeightInput.value) || barbellWeight;
     const snapped = snapTotalToIncrement(dw, inc);
     if (Math.abs(snapped - dw) > 1e-9){
       DOM.desiredWeightInput.value = snapped.toFixed(1);
-      // Add visual cue for snapping
       DOM.desiredWeightInput.classList.add('snapped');
       setTimeout(() => {
         DOM.desiredWeightInput.classList.remove('snapped');
-      }, 500); // Duration should match the animation in CSS
+      }, 500);
     }
   }
 
@@ -318,7 +320,6 @@
     renderTable(sets, current);
   }
 
-  // A trigger for buttons and other controls
   const trigger = () => { enforcePlateAndStep(); updateAll(); saveCurrentExerciseState(); };
 
   // ---------- State wiring ----------
@@ -341,13 +342,15 @@
     const st = loadState(ex);
     DOM.desiredWeightInput.value = Number(st.lastWeight || 20).toFixed(1);
     applyPlatesFromObject(st.plates || defaultState().plates);
+    DOM.setCount.textContent = st.currentSet || 1;
   }
 
   function saveCurrentExerciseState(){
     const ex = DOM.exerciseSelect.value;
     const st = {
       lastWeight: parseFloat(DOM.desiredWeightInput.value) || 20,
-      plates: readPlateCheckboxesToObject()
+      plates: readPlateCheckboxesToObject(),
+      currentSet: parseInt(DOM.setCount.textContent, 10) || 1
     };
     saveState(ex, st);
   }
@@ -366,7 +369,6 @@
     saveCurrentExerciseState();
   });
 
-  // Event listeners now use the input's step attribute, which is kept up-to-date
   DOM.incBtn.addEventListener('click', () => {
     const inc = parseFloat(DOM.desiredWeightInput.step) || 0.5;
     let val = parseFloat(DOM.desiredWeightInput.value) || barbellWeight;
@@ -393,6 +395,69 @@
     DOM.plateGrid.querySelectorAll('input[type="checkbox"]').forEach(b=> b.checked = false);
     trigger();
   });
+  
+  // ---------- Set Counter and Timer Logic ----------
+  let currentSet = 1;
+  
+  function updateSetCounter(value) {
+    currentSet = Math.max(1, value);
+    DOM.setCount.textContent = currentSet;
+    saveCurrentExerciseState();
+  }
+
+  DOM.increaseSetBtn.addEventListener('click', () => updateSetCounter(currentSet + 1));
+  DOM.decreaseSetBtn.addEventListener('click', () => updateSetCounter(currentSet - 1));
+
+  let timerInterval;
+  let timerSeconds = 180;
+
+  function formatTime(seconds) {
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+  }
+
+  function stopTimer() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    DOM.timerDisplay.textContent = formatTime(180);
+    DOM.timerDisplay.classList.remove('timer-active');
+  }
+
+  function showNotification() {
+    if (Notification.permission === 'granted') {
+      new Notification('Rest period over!', {
+        body: 'Time to start your next set.',
+        icon: 'favicon.ico' 
+      });
+    }
+  }
+
+  DOM.startTimerBtn.addEventListener('click', () => {
+    if (timerInterval) return; 
+
+    let seconds = timerSeconds;
+    DOM.timerDisplay.classList.add('timer-active');
+    
+    timerInterval = setInterval(() => {
+      seconds--;
+      DOM.timerDisplay.textContent = formatTime(seconds);
+
+      if (seconds <= 0) {
+        stopTimer();
+        showNotification();
+      }
+    }, 1000);
+  });
+
+  DOM.stopTimerBtn.addEventListener('click', stopTimer);
+
+  function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission !== 'denied') {
+      Notification.requestPermission();
+    }
+  }
+
 
   // ---------- Init ----------
   (function init(){
@@ -402,6 +467,8 @@
       }
     });
     loadExerciseState();
+    updateSetCounter(parseInt(DOM.setCount.textContent, 10));
+    requestNotificationPermission();
     trigger();
   })();
 })();
