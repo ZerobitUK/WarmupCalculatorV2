@@ -64,6 +64,27 @@
     <div id="status" class="status" aria-live="polite"></div>
     <div id="warmupRegion" aria-live="polite"></div>
   </section>
+
+  <section aria-label="Set Timer and Counter">
+    <div class="set-tracker">
+      <div class="set-counter">
+        <h2 class="tracker-title">Set Counter</h2>
+        <div class="counter-controls">
+          <button type="button" id="decreaseSet">-</button>
+          <span id="setCount">1</span>
+          <button type="button" id="increaseSet">+</button>
+        </div>
+      </div>
+      <div class="rest-timer">
+        <h2 class="tracker-title">Rest Timer</h2>
+        <div id="timerDisplay" class="timer-display" aria-live="off">3:00</div>
+        <div class="adjust-buttons">
+          <button type="button" id="startTimer">Start 3 min</button>
+          <button type="button" id="stopTimer">Stop/Reset</button>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <script src="script.js"></script>
