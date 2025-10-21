@@ -21,7 +21,9 @@
     decreaseSetBtn: document.getElementById('decreaseSet'),
     timerDisplay: document.getElementById('timerDisplay'),
     startTimerBtn: document.getElementById('startTimer'),
-    stopTimerBtn: document.getElementById('stopTimer')
+    stopTimerBtn: document.getElementById('stopTimer'),
+    timerMinutes: document.getElementById('timerMinutes'),
+    timerSeconds: document.getElementById('timerSeconds')
   };
 
   // Utility: debounce
@@ -36,7 +38,7 @@
     ['25','20','15','10','5','2.5','1.25','1','0.75','0.5','0.25'].forEach(p=>{
       plates[p] = defaultPlates.includes(p);
     });
-    return { lastWeight: 20, plates, currentSet: 1 };
+    return { lastWeight: 20, plates, currentSet: 0, timerMinutes: 3, timerSeconds: 0 };
   }
   function loadState(ex){
     try{
@@ -46,7 +48,9 @@
       // backward-safe defaults
       if(typeof obj.lastWeight !== 'number') obj.lastWeight = 20;
       if(!obj.plates) obj.plates = defaultState().plates;
-      if(typeof obj.currentSet !== 'number') obj.currentSet = 1;
+      if(typeof obj.currentSet !== 'number') obj.currentSet = 0;
+      if(typeof obj.timerMinutes !== 'number') obj.timerMinutes = 3;
+      if(typeof obj.timerSeconds !== 'number') obj.timerSeconds = 0;
       return obj;
     }catch{ return defaultState(); }
   }
@@ -342,7 +346,10 @@
     const st = loadState(ex);
     DOM.desiredWeightInput.value = Number(st.lastWeight || 20).toFixed(1);
     applyPlatesFromObject(st.plates || defaultState().plates);
-    DOM.setCount.textContent = st.currentSet || 1;
+    DOM.setCount.textContent = st.currentSet || 0;
+    DOM.timerMinutes.value = st.timerMinutes;
+    DOM.timerSeconds.value = st.timerSeconds;
+    updateTimerDisplay();
   }
 
   function saveCurrentExerciseState(){
@@ -350,7 +357,9 @@
     const st = {
       lastWeight: parseFloat(DOM.desiredWeightInput.value) || 20,
       plates: readPlateCheckboxesToObject(),
-      currentSet: parseInt(DOM.setCount.textContent, 10) || 1
+      currentSet: parseInt(DOM.setCount.textContent, 10) || 0,
+      timerMinutes: parseInt(DOM.timerMinutes.value, 10) || 3,
+      timerSeconds: parseInt(DOM.timerSeconds.value, 10) || 0
     };
     saveState(ex, st);
   }
@@ -397,10 +406,10 @@
   });
   
   // ---------- Set Counter and Timer Logic ----------
-  let currentSet = 1;
+  let currentSet = 0;
   
   function updateSetCounter(value) {
-    currentSet = Math.max(1, value);
+    currentSet = Math.max(0, value);
     DOM.setCount.textContent = currentSet;
     saveCurrentExerciseState();
   }
@@ -409,18 +418,23 @@
   DOM.decreaseSetBtn.addEventListener('click', () => updateSetCounter(currentSet - 1));
 
   let timerInterval;
-  let timerSeconds = 180;
 
   function formatTime(seconds) {
     const min = Math.floor(seconds / 60);
     const sec = seconds % 60;
     return `${min}:${sec < 10 ? '0' : ''}${sec}`;
   }
+  
+  function updateTimerDisplay() {
+    const minutes = parseInt(DOM.timerMinutes.value, 10) || 0;
+    const seconds = parseInt(DOM.timerSeconds.value, 10) || 0;
+    DOM.timerDisplay.textContent = formatTime(minutes * 60 + seconds);
+  }
 
   function stopTimer() {
     clearInterval(timerInterval);
     timerInterval = null;
-    DOM.timerDisplay.textContent = formatTime(180);
+    updateTimerDisplay();
     DOM.timerDisplay.classList.remove('timer-active');
   }
 
@@ -436,18 +450,30 @@
   DOM.startTimerBtn.addEventListener('click', () => {
     if (timerInterval) return; 
 
-    let seconds = timerSeconds;
+    let minutes = parseInt(DOM.timerMinutes.value, 10) || 0;
+    let seconds = parseInt(DOM.timerSeconds.value, 10) || 0;
+    let totalSeconds = minutes * 60 + seconds;
+
     DOM.timerDisplay.classList.add('timer-active');
     
     timerInterval = setInterval(() => {
-      seconds--;
-      DOM.timerDisplay.textContent = formatTime(seconds);
+      totalSeconds--;
+      DOM.timerDisplay.textContent = formatTime(totalSeconds);
 
-      if (seconds <= 0) {
+      if (totalSeconds <= 0) {
         stopTimer();
         showNotification();
       }
     }, 1000);
+  });
+  
+  DOM.timerMinutes.addEventListener('change', () => {
+    updateTimerDisplay();
+    saveCurrentExerciseState();
+  });
+  DOM.timerSeconds.addEventListener('change', () => {
+    updateTimerDisplay();
+    saveCurrentExerciseState();
   });
 
   DOM.stopTimerBtn.addEventListener('click', stopTimer);
