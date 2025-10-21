@@ -32,20 +32,18 @@ label{ display:block; margin-bottom:8px; font-weight:500; color:var(--muted) }
 input[type="number"], select{
   width:100%; padding:12px; border:1px solid #444; border-radius:var(--radius-sm);
   background:#2c2c2c; color:var(--text); font-size:1rem; margin-bottom:15px;
-  transition: box-shadow 0.2s ease-in-out; /* Added for snap effect */
+  transition: box-shadow 0.2s ease-in-out;
 }
 input[type="number"]:focus, select:focus{
   outline: none; border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(0,170,255,.3);
 }
 
-/* *** NEW: Keyframes for Input Snap Animation *** */
 @keyframes snap-flash {
   0% { box-shadow: 0 0 0 2px rgba(0, 170, 255, 0); }
   50% { box-shadow: 0 0 0 3px rgba(0, 170, 255, 0.5); }
   100% { box-shadow: 0 0 0 2px rgba(0, 170, 255, 0); }
 }
-/* *** NEW: Class for Input Snap *** */
 input[type="number"].snapped {
   animation: snap-flash 0.5s ease-in-out;
 }
@@ -78,23 +76,21 @@ legend{ padding:0 6px; color:var(--muted) }
 table{ width:100%; border-collapse:collapse; margin-top:20px; box-shadow: 0 2px 8px rgba(0,0,0,.15) }
 th, td{ border:1px solid var(--line); padding:12px; text-align:left; vertical-align:top }
 th{ background:var(--thead); color:var(--accent); font-weight:600 }
-td{ background:var(--row); transition: background-color 0.2s; } /* Added transition */
+td{ background:var(--row); transition: background-color 0.2s; }
 tr:nth-child(even) td{ background:var(--row-alt) }
-td pre { font-family: inherit; margin: 0; } /* Added for plate breakdown formatting */
+td pre { font-family: inherit; margin: 0; }
 .note{ color:#b0b0b0; font-size:.9em; margin-top:6px }
 .status{ margin-top:10px; color:#ffce7a; font-size:.95em }
 
-/* *** NEW: Styling for Work Set Row *** */
 .work-set td {
-    background-color: #0c2b42; /* A darker, accent-related color */
+    background-color: #0c2b42;
     color: #fff;
     font-weight: 600;
 }
 .work-set td:first-child {
-    color: var(--accent); /* Make the "5x5 (Work Set)" text stand out */
+    color: var(--accent);
 }
 
-/* *** NEW: Styling for Warmup Tip *** */
 .warmup-tip {
   font-size: 0.9em;
   color: var(--muted);
@@ -105,8 +101,57 @@ td pre { font-family: inherit; margin: 0; } /* Added for plate breakdown formatt
   border-left: 3px solid var(--accent);
 }
 
+/* Set Tracker and Timer Styles */
+.set-tracker {
+  display: flex;
+  justify-content: space-around;
+  gap: 20px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.set-counter, .rest-timer {
+  flex: 1;
+  text-align: center;
+}
+.tracker-title {
+  color: var(--muted);
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+}
+.counter-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+}
+.counter-controls button {
+  font-size: 1.5rem;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  padding: 0;
+}
+.counter-controls span {
+  font-size: 2.5rem;
+  font-weight: 600;
+  min-width: 60px;
+}
+.timer-display {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 10px;
+  letter-spacing: 2px;
+}
+.timer-display.timer-active {
+  color: var(--accent);
+}
+
+
 @media (max-width:600px){
   body{ padding:10px } .container{ padding:20px } h1{ font-size:1.8rem }
+  .set-tracker { flex-direction: column; }
 }
 @media (max-width:400px){
   .adjust-buttons button{ flex-basis:100%; min-width:0 }
