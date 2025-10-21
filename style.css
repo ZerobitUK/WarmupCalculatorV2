@@ -147,6 +147,23 @@ td pre { font-family: inherit; margin: 0; }
 .timer-display.timer-active {
   color: var(--accent);
 }
+.timer-inputs {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+.timer-inputs input {
+  width: 70px;
+  text-align: center;
+  font-size: 1.2rem;
+  padding: 8px;
+}
+.timer-inputs span {
+  font-size: 1.5rem;
+  color: var(--muted);
+}
 
 
 @media (max-width:600px){
