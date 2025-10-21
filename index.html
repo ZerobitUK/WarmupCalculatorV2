@@ -71,15 +71,20 @@
         <h2 class="tracker-title">Set Counter</h2>
         <div class="counter-controls">
           <button type="button" id="decreaseSet">-</button>
-          <span id="setCount">1</span>
+          <span id="setCount">0</span>
           <button type="button" id="increaseSet">+</button>
         </div>
       </div>
       <div class="rest-timer">
         <h2 class="tracker-title">Rest Timer</h2>
+        <div class="timer-inputs">
+          <input type="number" id="timerMinutes" value="3" min="0" max="59" aria-label="Timer minutes">
+          <span>:</span>
+          <input type="number" id="timerSeconds" value="0" min="0" max="59" aria-label="Timer seconds">
+        </div>
         <div id="timerDisplay" class="timer-display" aria-live="off">3:00</div>
         <div class="adjust-buttons">
-          <button type="button" id="startTimer">Start 3 min</button>
+          <button type="button" id="startTimer">Start Timer</button>
           <button type="button" id="stopTimer">Stop/Reset</button>
         </div>
       </div>
