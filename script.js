@@ -438,12 +438,19 @@
     DOM.timerDisplay.classList.remove('timer-active');
   }
 
-  function showNotification() {
-    if (Notification.permission === 'granted') {
-      new Notification('Rest period over!', {
+  // UPDATED: Now uses the service worker
+  async function showNotification() {
+    if (Notification.permission !== 'granted' || !navigator.serviceWorker) {
+      return;
+    }
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification('Rest period over!', {
         body: 'Time to start your next set.',
-        icon: 'favicon.ico' 
+        icon: 'favicon.ico' // Note: This file doesn't exist yet
       });
+    } catch (err) {
+      console.error('Notification error:', err);
     }
   }
 
@@ -453,6 +460,8 @@
     let minutes = parseInt(DOM.timerMinutes.value, 10) || 0;
     let seconds = parseInt(DOM.timerSeconds.value, 10) || 0;
     let totalSeconds = minutes * 60 + seconds;
+
+    if (totalSeconds <= 0) return;
 
     DOM.timerDisplay.classList.add('timer-active');
     
@@ -478,9 +487,21 @@
 
   DOM.stopTimerBtn.addEventListener('click', stopTimer);
 
-  function requestNotificationPermission() {
-    if ('Notification' in window && Notification.permission !== 'denied') {
-      Notification.requestPermission();
+  // UPDATED: Now part of the init() function
+  async function setupNotifications() {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+      console.warn('Notifications or Service Workers not supported.');
+      return;
+    }
+    
+    try {
+      await navigator.serviceWorker.register('sw.js');
+    } catch (err) {
+      console.error('Service Worker registration failed:', err);
+    }
+    
+    if (Notification.permission !== 'denied') {
+      await Notification.requestPermission();
     }
   }
 
@@ -494,7 +515,7 @@
     });
     loadExerciseState();
     updateSetCounter(parseInt(DOM.setCount.textContent, 10));
-    requestNotificationPermission();
+    setupNotifications(); // Replaces the old requestNotificationPermission()
     trigger();
   })();
 })();
