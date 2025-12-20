@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Will's 5x5 Warmup Calculator</title>
-  <meta name="description" content="StrongLifts-style warmup & work-set calculator with plate inventory." />
+  <meta name="description" content="StrongLifts-style warmup calculator with minimal-swap loading." />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -24,9 +24,7 @@
       </select>
 
       <label for="desiredWeight">Work Set Weight (kg)</label>
-      <input type="number" id="desiredWeight" name="desiredWeight" inputmode="decimal" step="any" required aria-describedby="weightHelp" autocomplete="off">
-
-      <div id="weightHelp" class="note">Snaps to the smallest available plate pair.</div>
+      <input type="number" id="desiredWeight" name="desiredWeight" inputmode="decimal" step="any" required autocomplete="off">
 
       <div class="computed-weight">
         <span>-10% Weight (Deload): <strong id="minus10PercentWeight">0.0</strong> kg</span>
@@ -38,9 +36,8 @@
       </div>
 
       <details class="inventory-accordion">
-        <summary>Edit Plate Inventory (Number of Pairs)</summary>
-        <div class="plate-inventory-grid" id="plateGrid">
-          </div>
+        <summary>Edit Plate Inventory (Pairs)</summary>
+        <div class="plate-inventory-grid" id="plateGrid"></div>
         <div class="adjust-buttons">
           <button type="button" id="selectAllPlates">All 1 Pair</button>
           <button type="button" id="resetPlates">Reset to 0</button>
@@ -54,7 +51,6 @@
     <div id="warmupRegion" aria-live="polite"></div>
   </section>
 </main>
-
 <script src="script.js"></script>
 </body>
 </html>
