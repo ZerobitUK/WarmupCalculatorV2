@@ -4,98 +4,24 @@
   --text: #e0e0e0;
   --accent: #00aaff;
   --line: #333;
-  --radius: 12px;
+  --add: #4caf50; /* Green for additions */
 }
 
-body {
-  font-family: 'Inter', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  margin: 0;
-  padding: 15px;
-  display: flex;
-  justify-content: center;
-}
+/* ... (Keep previous structural styles) ... */
 
-.container {
-  width: 100%;
-  max-width: 600px;
-  background: var(--panel);
-  padding: 20px;
-  border-radius: var(--radius);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-}
-
-h1 { color: var(--accent); text-align: center; font-size: 1.5rem; }
-
-label { display: block; margin: 15px 0 5px; font-weight: 500; }
-
-input, select {
-  width: 100%;
-  padding: 12px;
-  background: #2c2c2c;
-  border: 1px solid #444;
-  color: #fff;
-  border-radius: 8px;
-  font-size: 1rem;
-}
-
-.adjust-buttons {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.adjust-buttons button {
-  flex: 1;
-  padding: 10px;
-  background: #007bff;
-  border: none;
-  color: white;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-/* Accordion Styles */
-.inventory-accordion {
-  margin-top: 20px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #252525;
-}
-
-summary {
-  padding: 12px;
-  cursor: pointer;
+.additions {
+  color: var(--add);
   font-weight: 600;
-  color: var(--accent);
 }
 
-.plate-inventory-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-  gap: 10px;
-  padding: 15px;
+.total-plates {
+  color: #888;
+  font-size: 0.85rem;
 }
 
-.plate-input-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: #1e1e1e;
-  padding: 8px;
-  border-radius: 6px;
-}
+table { font-size: 0.9rem; }
+th { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
 
-.plate-input-item label { margin: 0 0 5px; font-size: 0.8rem; }
-.plate-input-item input { width: 50px; text-align: center; padding: 5px; }
+small { color: #888; display: block; margin-top: 2px; }
 
-/* Table Styles */
-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-th, td { padding: 12px; border: 1px solid var(--line); text-align: left; }
-th { background: #2a2a2a; color: var(--accent); }
-pre { margin: 0; font-family: inherit; }
-
-.work-set td { background: #0c2b42; font-weight: 600; }
-.note { font-size: 0.85rem; color: #888; margin-top: 4px; }
-.status { color: #ffce7a; margin-top: 10px; }
+.work-set td { border-top: 2px solid var(--accent); }
