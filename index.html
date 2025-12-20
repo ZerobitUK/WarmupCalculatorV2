@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Will's 5x5 Warmup Calculator</title>
-  <meta name="description" content="StrongLifts-style warmup & work-set calculator with plate breakdowns." />
+  <meta name="description" content="StrongLifts-style warmup & work-set calculator with plate inventory." />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -15,7 +15,7 @@
   <section aria-label="Workout Inputs">
     <form id="workoutForm" onsubmit="return false;">
       <label for="exercise">Select Exercise</label>
-      <select id="exercise" name="exercise" aria-label="Select Exercise">
+      <select id="exercise" name="exercise">
         <option value="squat">Squat</option>
         <option value="bench">Bench Press</option>
         <option value="overhead">Overhead Press</option>
@@ -28,24 +28,24 @@
 
       <div id="weightHelp" class="note">Snaps to the smallest available plate pair.</div>
 
-      <div class="computed-weight" aria-live="polite">
+      <div class="computed-weight">
         <span>-10% Weight (Deload): <strong id="minus10PercentWeight">0.0</strong> kg</span>
       </div>
 
       <div class="adjust-buttons">
-        <button type="button" id="decreaseWeight" aria-label="Decrease weight">-0.5 kg</button>
-        <button type="button" id="increaseWeight" aria-label="Increase weight">+0.5 kg</button>
+        <button type="button" id="decreaseWeight">-0.5 kg</button>
+        <button type="button" id="increaseWeight">+0.5 kg</button>
       </div>
 
-      <fieldset>
-        <legend>Available Plates (Number of Pairs)</legend>
+      <details class="inventory-accordion">
+        <summary>Edit Plate Inventory (Number of Pairs)</summary>
         <div class="plate-inventory-grid" id="plateGrid">
           </div>
         <div class="adjust-buttons">
-          <button type="button" id="selectAllPlates">Set All to 1 Pair</button>
-          <button type="button" id="resetPlates">Reset All to 0</button>
+          <button type="button" id="selectAllPlates">All 1 Pair</button>
+          <button type="button" id="resetPlates">Reset to 0</button>
         </div>
-      </fieldset>
+      </details>
     </form>
   </section>
 
