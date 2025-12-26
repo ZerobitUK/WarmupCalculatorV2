@@ -9,8 +9,8 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<main class="container" aria-labelledby="title">
-  <h1 id="title">Will's 5x5 Warmup Calculator</h1>
+<main class="container">
+  <h1>Will's 5x5 Warmup Calculator</h1>
 
   <section aria-label="Workout Inputs">
     <form id="workoutForm" onsubmit="return false;">
@@ -31,14 +31,15 @@
       </div>
 
       <div class="adjust-buttons">
-        <button type="button" id="decreaseWeight">-0.5 kg</button>
-        <button type="button" id="increaseWeight">+0.5 kg</button>
+        <button type="button" id="decreaseWeight" aria-label="Decrease weight">-2.5 kg</button>
+        <button type="button" id="increaseWeight" aria-label="Increase weight">+2.5 kg</button>
       </div>
 
       <details class="inventory-accordion">
         <summary>Edit Plate Inventory (Pairs)</summary>
-        <div class="plate-inventory-grid" id="plateGrid"></div>
-        <div class="adjust-buttons">
+        <div class="plate-inventory-grid" id="plateGrid">
+          </div>
+        <div class="adjust-buttons inventory-controls">
           <button type="button" id="selectAllPlates">All 1 Pair</button>
           <button type="button" id="resetPlates">Reset to 0</button>
         </div>
@@ -48,7 +49,7 @@
 
   <section aria-label="Warmup & Work Sets">
     <div id="status" class="status" aria-live="polite"></div>
-    <div id="warmupRegion" aria-live="polite"></div>
+    <div id="warmupRegion" class="table-container" aria-live="polite"></div>
   </section>
 </main>
 <script src="script.js"></script>
