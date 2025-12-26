@@ -117,7 +117,7 @@ summary:hover { background: #333; }
 }
 
 .plate-input-item label { margin: 0 0 5px; font-size: 0.8rem; }
-.plate-input-item input { width: 60px; text-align: center; padding: 5px; margin-bottom: 0; border: none; background: #333; }
+.plate-input-item input { width: 60px; text-align: center; padding: 5px; margin-bottom: 0; border: none; background: #333; color: white; border-radius: 4px; }
 
 .inventory-controls { padding: 0 15px 15px; }
 
@@ -160,12 +160,17 @@ pre {
 
 .additions {
   color: var(--add);
-  font-weight: 600;
+  font-weight: 700;
+  background: rgba(76, 175, 80, 0.1);
+  padding: 4px;
+  border-radius: 4px;
 }
 
 .total-plates {
   color: #999;
   font-size: 0.85rem;
+  border-left: 1px solid var(--line);
+  padding-left: 8px;
 }
 
 .work-set td {
