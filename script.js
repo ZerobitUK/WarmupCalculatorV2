@@ -48,16 +48,9 @@
     return inv.sort((a,b) => b.w - a.w);
   }
 
-  /**
-   * Minimal Change Logic:
-   * Tries to reach targetG by adding to currentPlateCounts.
-   * If adding is impossible (remainG !== 0) or target is lighter, 
-   * it falls back to a fresh greedy calculation to avoid being "stuck".
-   */
   function calculateMinimalChange(target, inventory, currentPlateCounts) {
     const targetG = Math.round(((target - barbellWeight) / 2) * 1000);
     
-    // 1. Calculate current weight on side
     let currentG = 0;
     Object.entries(currentPlateCounts).forEach(([w, count]) => {
       currentG += Math.round(parseFloat(w) * 1000) * count;
@@ -67,7 +60,7 @@
     let additions = {};
     let remainG = targetG - currentG;
 
-    // 2. Try to reach the weight by JUST ADDING plates
+    // Try to reach the weight by JUST ADDING plates
     if (remainG >= 0) {
       for (const p of inventory) {
         const alreadyUsed = workingCounts[p.w] || 0;
@@ -84,7 +77,7 @@
       }
     }
 
-    // 3. Fallback: If adding didn't reach target exactly, reset and do a fresh load
+    // Fallback: If adding failed or target is lighter, do a fresh greedy load
     if (remainG !== 0 || targetG < currentG) {
       workingCounts = {};
       additions = {}; 
@@ -112,7 +105,6 @@
     let config = [];
     let structure = '5x5';
 
-    // Warmup configurations
     if (ex === 'squat') {
       config.push({ r: '2x5', f: 20 });
       if (workWeight > 30) config.push({ r: '1x5', p: 0.4, m: 25 });
@@ -162,8 +154,16 @@
       const tr = document.createElement('tr');
       if (s.pct === 'Work Set') tr.classList.add('work-set');
       
-      const adds = Object.entries(s.additions).map(([w, c]) => `+ ${w}kg × ${c}`).join('\n') || 'No change';
-      const total = Object.entries(s.totalPlates).filter(([w, c]) => c > 0).map(([w, c]) => `${w}kg × ${c}`).join('\n') || 'Bar only';
+      const adds = Object.entries(s.additions)
+        .sort((a,b) => parseFloat(b[0]) - parseFloat(a[0]))
+        .map(([w, c]) => `+ ${w}kg × ${c}`)
+        .join('\n') || 'No change';
+
+      const total = Object.entries(s.totalPlates)
+        .filter(([w, c]) => c > 0)
+        .sort((a,b) => parseFloat(b[0]) - parseFloat(a[0]))
+        .map(([w, c]) => `${w}kg × ${c}`)
+        .join('\n') || 'Bar only';
 
       tr.innerHTML = `
         <td>${s.set}<br><small>(${s.pct})</small></td>
@@ -181,7 +181,6 @@
     DOM.deloadDisplay.textContent = (current * 0.9).toFixed(1);
     const inventory = getInventory();
     
-    // Dynamically update adjustment button text
     const minPlate = inventory.length ? Math.min(...inventory.map(i => i.w)) : 0.5;
     const step = minPlate * 2;
     DOM.incBtn.textContent = `+${step} kg`;
