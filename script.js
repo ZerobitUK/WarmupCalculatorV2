@@ -20,6 +20,7 @@
   };
 
   const keyFor = (ex) => `exState_v3_${ex}`;
+  
   function defaultState() {
     const plates = {};
     weights.forEach(w => plates[w] = (parseFloat(w) >= 1.25 ? 1 : 0));
@@ -47,11 +48,6 @@
     return inv.sort((a,b) => b.w - a.w);
   }
 
-  /**
-   * Minimal Change Logic:
-   * Tries to reach targetG by adding to currentPlateCounts.
-   * If impossible (e.g., target is lighter), it resets and does a greedy calculation.
-   */
   function calculateMinimalChange(target, inventory, currentPlateCounts) {
     const targetG = Math.round(((target - barbellWeight) / 2) * 1000);
     let currentG = 0;
@@ -61,14 +57,12 @@
     let additions = {};
 
     if (targetG < currentG) {
-        // Reset if we need to take weight OFF (rare in warmup sequence)
         workingCounts = {};
         currentG = 0;
     }
 
     let remainG = targetG - currentG;
     
-    // Greedily add plates to fill the gap
     for (const p of inventory) {
         const alreadyUsed = workingCounts[p.w] || 0;
         const available = p.qty - alreadyUsed;
@@ -92,7 +86,6 @@
     let config = [];
     let structure = '5x5';
 
-    // Warmup configurations based on exercise
     if (ex === 'squat') {
       config.push({ r: '2x5', f: 20 });
       if (workWeight > 30) config.push({ r: '1x5', p: 0.4, m: 25 });
@@ -115,7 +108,7 @@
     }
 
     let results = [];
-    let currentBar = {}; // Track what's on the bar
+    let currentBar = {};
 
     config.forEach(cfg => {
         let t = cfg.f || (workWeight * cfg.p);
@@ -161,6 +154,13 @@
     DOM.deloadDisplay.textContent = (current * 0.9).toFixed(1);
     const inventory = getInventory();
     
+    // Dynamically update adjustment button text based on smallest available plate
+    const minPlate = inventory.length ? Math.min(...inventory.map(i => i.w)) : 0.5;
+    const step = minPlate * 2;
+    DOM.incBtn.textContent = `+${step} kg`;
+    DOM.decBtn.textContent = `-${step} kg`;
+    DOM.desiredWeightInput.step = step;
+
     const sets = generateSets(current, inventory);
     render(sets);
 
@@ -190,8 +190,19 @@
     update();
   });
   DOM.desiredWeightInput.addEventListener('input', debounce(update));
-  DOM.incBtn.addEventListener('click', () => { DOM.desiredWeightInput.value = (parseFloat(DOM.desiredWeightInput.value) + 2.5).toFixed(1); update(); });
-  DOM.decBtn.addEventListener('click', () => { DOM.desiredWeightInput.value = Math.max(20, parseFloat(DOM.desiredWeightInput.value) - 2.5).toFixed(1); update(); });
+  
+  DOM.incBtn.addEventListener('click', () => { 
+    const step = parseFloat(DOM.desiredWeightInput.step) || 2.5;
+    DOM.desiredWeightInput.value = (parseFloat(DOM.desiredWeightInput.value) + step).toFixed(1); 
+    update(); 
+  });
+  
+  DOM.decBtn.addEventListener('click', () => { 
+    const step = parseFloat(DOM.desiredWeightInput.step) || 2.5;
+    DOM.desiredWeightInput.value = Math.max(20, parseFloat(DOM.desiredWeightInput.value) - step).toFixed(1); 
+    update(); 
+  });
+
   DOM.selectAllBtn.addEventListener('click', () => { DOM.plateGrid.querySelectorAll('input').forEach(i => i.value = 1); update(); });
   DOM.resetPlatesBtn.addEventListener('click', () => { DOM.plateGrid.querySelectorAll('input').forEach(i => i.value = 0); update(); });
 
