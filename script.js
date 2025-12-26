@@ -48,33 +48,59 @@
     return inv.sort((a,b) => b.w - a.w);
   }
 
+  /**
+   * Minimal Change Logic:
+   * Tries to reach targetG by adding to currentPlateCounts.
+   * If adding is impossible (remainG !== 0) or target is lighter, 
+   * it falls back to a fresh greedy calculation to avoid being "stuck".
+   */
   function calculateMinimalChange(target, inventory, currentPlateCounts) {
     const targetG = Math.round(((target - barbellWeight) / 2) * 1000);
+    
+    // 1. Calculate current weight on side
     let currentG = 0;
-    Object.entries(currentPlateCounts).forEach(([w, count]) => currentG += Math.round(parseFloat(w) * 1000) * count);
+    Object.entries(currentPlateCounts).forEach(([w, count]) => {
+      currentG += Math.round(parseFloat(w) * 1000) * count;
+    });
 
     let workingCounts = { ...currentPlateCounts };
     let additions = {};
-
-    if (targetG < currentG) {
-        workingCounts = {};
-        currentG = 0;
-    }
-
     let remainG = targetG - currentG;
-    
-    for (const p of inventory) {
+
+    // 2. Try to reach the weight by JUST ADDING plates
+    if (remainG >= 0) {
+      for (const p of inventory) {
         const alreadyUsed = workingCounts[p.w] || 0;
         const available = p.qty - alreadyUsed;
         if (available > 0) {
-            const needed = Math.floor(remainG / p.wG);
-            const toAdd = Math.min(needed, available);
-            if (toAdd > 0) {
-                workingCounts[p.w] = alreadyUsed + toAdd;
-                additions[p.w] = toAdd;
-                remainG -= toAdd * p.wG;
-            }
+          const needed = Math.floor(remainG / p.wG);
+          const toAdd = Math.min(needed, available);
+          if (toAdd > 0) {
+            workingCounts[p.w] = alreadyUsed + toAdd;
+            additions[p.w] = toAdd;
+            remainG -= toAdd * p.wG;
+          }
         }
+      }
+    }
+
+    // 3. Fallback: If adding didn't reach target exactly, reset and do a fresh load
+    if (remainG !== 0 || targetG < currentG) {
+      workingCounts = {};
+      additions = {}; 
+      let freshRemainG = targetG;
+      
+      for (const p of inventory) {
+        const count = Math.min(p.qty, Math.floor(freshRemainG / p.wG));
+        if (count > 0) {
+          workingCounts[p.w] = count;
+          additions[p.w] = count; 
+          freshRemainG -= count * p.wG;
+        }
+      }
+      
+      const achieved = (Math.round(barbellWeight * 1000) + (targetG - freshRemainG) * 2) / 1000;
+      return { weight: achieved, totalPlates: workingCounts, additions };
     }
 
     const achieved = (Math.round(barbellWeight * 1000) + (targetG - remainG) * 2) / 1000;
@@ -86,6 +112,7 @@
     let config = [];
     let structure = '5x5';
 
+    // Warmup configurations
     if (ex === 'squat') {
       config.push({ r: '2x5', f: 20 });
       if (workWeight > 30) config.push({ r: '1x5', p: 0.4, m: 25 });
@@ -154,7 +181,7 @@
     DOM.deloadDisplay.textContent = (current * 0.9).toFixed(1);
     const inventory = getInventory();
     
-    // Dynamically update adjustment button text based on smallest available plate
+    // Dynamically update adjustment button text
     const minPlate = inventory.length ? Math.min(...inventory.map(i => i.w)) : 0.5;
     const step = minPlate * 2;
     DOM.incBtn.textContent = `+${step} kg`;
