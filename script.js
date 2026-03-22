@@ -1,7 +1,10 @@
 (() => {
-  const barbellWeight = 20; 
-  const weights = ['25','20','15','10','5','2.5','1.25','1','0.75','0.5','0.25'];
+  // ---------- Constants ----------
+  const barbellWeight = 20; // kg
+  const exercises = ['bench', 'deadlift', 'overhead', 'row', 'squat', 'close_grip_bench'];
+  const defaultPlates = ['25', '20', '15', '10', '5', '2.5', '1.25'];
 
+  // ---------- DOM Elements ----------
   const DOM = {
     exerciseSelect: document.getElementById('exercise'),
     desiredWeightInput: document.getElementById('desiredWeight'),
@@ -15,222 +18,373 @@
     warmupRegion: document.getElementById('warmupRegion')
   };
 
-  const debounce = (fn, delay=200) => {
-    let t; return (...args) => { clearTimeout(t); t=setTimeout(()=>fn(...args), delay); };
-  };
-
-  const keyFor = (ex) => `exState_v3_${ex}`;
-  
-  function defaultState() {
-    const plates = {};
-    weights.forEach(w => plates[w] = (parseFloat(w) >= 1.25 ? 1 : 0));
-    return { lastWeight: 20, plates };
+  // Utility: debounce
+  function debounce(fn, delay = 200) {
+    let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), delay); };
   }
 
+  // ---------- Storage ----------
+  const keyFor = (ex) => `exState_${ex}`;
+  function defaultState() {
+    const plates = {};
+    ['25', '20', '15', '10', '5', '2.5', '1.25', '1', '0.75', '0.5', '0.25'].forEach(p => {
+      plates[p] = defaultPlates.includes(p);
+    });
+    return { lastWeight: 20, plates };
+  }
   function loadState(ex) {
     try {
       const raw = localStorage.getItem(keyFor(ex));
-      return raw ? JSON.parse(raw) : defaultState();
+      if (!raw) return defaultState();
+      const obj = JSON.parse(raw);
+      if (typeof obj.lastWeight !== 'number') obj.lastWeight = 20;
+      if (!obj.plates) obj.plates = defaultState().plates;
+      return obj;
     } catch { return defaultState(); }
   }
-
   const saveState = debounce((ex, state) => {
-    try { localStorage.setItem(keyFor(ex), JSON.stringify(state)); } catch {}
+    try { localStorage.setItem(keyFor(ex), JSON.stringify(state)); } catch { }
   }, 150);
 
-  function getInventory() {
-    const inputs = DOM.plateGrid.querySelectorAll('input');
-    const inv = [];
-    inputs.forEach(i => {
-      const qty = parseInt(i.value, 10) || 0;
-      if (qty > 0) inv.push({ w: parseFloat(i.dataset.weight), qty, wG: Math.round(parseFloat(i.dataset.weight)*1000) });
-    });
-    return inv.sort((a,b) => b.w - a.w);
+  // ---------- Helpers ----------
+  function getSelectedPlates() {
+    const boxes = DOM.plateGrid.querySelectorAll('input[type="checkbox"]');
+    const arr = [];
+    boxes.forEach(b => { if (b.checked) arr.push(parseFloat(b.value)); });
+    arr.sort((a, b) => b - a);
+    return arr;
   }
 
-  function calculateMinimalChange(target, inventory, currentPlateCounts) {
-    const targetG = Math.round(((target - barbellWeight) / 2) * 1000);
-    
-    let currentG = 0;
-    Object.entries(currentPlateCounts).forEach(([w, count]) => {
-      currentG += Math.round(parseFloat(w) * 1000) * count;
-    });
+  function smallestPairIncrement(plates) {
+    if (!plates.length) return 0.5;
+    const minPlate = Math.min(...plates);
+    return 2 * minPlate;
+  }
 
-    let workingCounts = { ...currentPlateCounts };
-    let additions = {};
-    let remainG = targetG - currentG;
+  function snapTotalToIncrement(total, increment) {
+    if (increment <= 0) return total;
+    const k = Math.round((total - barbellWeight) / increment);
+    return Math.max(barbellWeight, barbellWeight + k * increment);
+  }
 
-    // Try to reach the weight by JUST ADDING plates
-    if (remainG >= 0) {
-      for (const p of inventory) {
-        const alreadyUsed = workingCounts[p.w] || 0;
-        const available = p.qty - alreadyUsed;
-        if (available > 0) {
-          const needed = Math.floor(remainG / p.wG);
-          const toAdd = Math.min(needed, available);
-          if (toAdd > 0) {
-            workingCounts[p.w] = alreadyUsed + toAdd;
-            additions[p.w] = toAdd;
-            remainG -= toAdd * p.wG;
-          }
-        }
+  function kg(n) { return Number(n.toFixed(2)); }
+
+  function calculateOptimalWeight(targetWeight, plates) {
+    if (targetWeight <= barbellWeight) {
+      return { weight: barbellWeight, platePairs: [], exact: (targetWeight === barbellWeight), delta: kg(barbellWeight - targetWeight) };
+    }
+    if (!plates.length) return null;
+
+    const toG = (x) => Math.round(x * 1000);
+    const targetPerSideG = Math.max(0, toG((targetWeight - barbellWeight) / 2));
+    let remainG = targetPerSideG;
+    const plateGs = plates.map(p => toG(p));
+
+    const used = [];
+    for (const pG of plateGs) {
+      let count = Math.floor(remainG / pG);
+      if (count > 0) {
+        used.push({ plate: pG, count });
+        remainG -= count * pG;
       }
     }
 
-    // Fallback: If adding failed or target is lighter, do a fresh greedy load
-    if (remainG !== 0 || targetG < currentG) {
-      workingCounts = {};
-      additions = {}; 
-      let freshRemainG = targetG;
-      
-      for (const p of inventory) {
-        const count = Math.min(p.qty, Math.floor(freshRemainG / p.wG));
-        if (count > 0) {
-          workingCounts[p.w] = count;
-          additions[p.w] = count; 
-          freshRemainG -= count * p.wG;
-        }
-      }
-      
-      const achieved = (Math.round(barbellWeight * 1000) + (targetG - freshRemainG) * 2) / 1000;
-      return { weight: achieved, totalPlates: workingCounts, additions };
-    }
+    const achievedPerSideG = targetPerSideG - remainG;
+    const totalG = toG(barbellWeight) + achievedPerSideG * 2;
+    const achieved = totalG / 1000;
 
-    const achieved = (Math.round(barbellWeight * 1000) + (targetG - remainG) * 2) / 1000;
-    return { weight: achieved, totalPlates: workingCounts, additions };
+    const pairs = used.map(u => ({ plate: kg(u.plate / 1000), count: u.count }));
+    const exact = remainG === 0;
+    const delta = kg(achieved - targetWeight);
+    return { weight: kg(achieved), platePairs: pairs, exact, delta };
   }
 
-  function generateSets(workWeight, inventory) {
-    const ex = DOM.exerciseSelect.value;
-    let config = [];
-    let structure = '5x5';
+  function platePairsToLines(pairs) {
+    if (!pairs || pairs.length === 0) return 'Bar only';
+    return pairs.map(p => `${p.plate}kg × ${p.count}`).join('\n');
+  }
 
-    if (ex === 'squat') {
-      config.push({ r: '2x5', f: 20 });
-      if (workWeight > 30) config.push({ r: '1x5', p: 0.4, m: 25 });
-      if (workWeight > 40) config.push({ r: '1x3', p: 0.6, m: 30 });
-      if (workWeight > 50) config.push({ r: '1x2', p: 0.8, m: 35 });
-    } else if (ex === 'bench' || ex === 'overhead') {
-      config.push({ r: '2x5', f: 20 });
-      if (workWeight > 25) config.push({ r: '1x5', p: 0.5, m: 22.5 });
-      if (workWeight > 35) config.push({ r: '1x3', p: 0.7, m: 25 });
-      if (workWeight > 45) config.push({ r: '1x2', p: 0.85, m: 30 });
-    } else if (ex === 'row') {
-      const start = Math.max(20, workWeight * 0.4, workWeight > 40 ? 30 : 20);
-      if (workWeight > 20) config.push({ r: '1x5', f: start });
-      if (workWeight > start + 10) config.push({ r: '1x3', p: 0.7, m: start + 5 });
-    } else if (ex === 'deadlift') {
-      structure = '1x5';
-      const start = Math.max(20, workWeight * 0.4, workWeight > 60 ? 40 : 20);
-      if (workWeight > 20) config.push({ r: '1x5', f: start });
-      if (workWeight > start + 15) config.push({ r: '1x3', p: 0.65, m: start + 10 });
+  function setStatus(msg) { DOM.statusEl.textContent = msg || ''; }
+
+  // ---------- Warmup Logic ----------
+  function generateWarmupSets(workWeight, plates) {
+    const selectedExercise = DOM.exerciseSelect.value;
+    let warmupConfig = [];
+    let workSetStructure = '5x5';
+    workWeight = Math.max(barbellWeight, workWeight);
+
+    if (selectedExercise === 'squat') {
+      warmupConfig.push({ reps: '2x5', fixedWeight: barbellWeight });
+      if (workWeight > barbellWeight + 10) warmupConfig.push({ reps: '1x5', percentage: 0.40, min: barbellWeight + 5 });
+      if (workWeight > barbellWeight + 20) warmupConfig.push({ reps: '1x3', percentage: 0.60, min: barbellWeight + 10 });
+      if (workWeight > barbellWeight + 30) warmupConfig.push({ reps: '1x2', percentage: 0.80, min: barbellWeight + 15 });
+    } else if (selectedExercise === 'bench') {
+      warmupConfig.push({ reps: '2x5', fixedWeight: barbellWeight });
+      if (workWeight > barbellWeight + 5) warmupConfig.push({ reps: '1x5', percentage: 0.50, min: barbellWeight + 2.5 });
+      if (workWeight > barbellWeight + 15) warmupConfig.push({ reps: '1x3', percentage: 0.70, min: barbellWeight + 5 });
+      if (workWeight > barbellWeight + 25) warmupConfig.push({ reps: '1x2', percentage: 0.85, min: barbellWeight + 10 });
+    } else if (selectedExercise === 'overhead') {
+      warmupConfig.push({ reps: '2x5', fixedWeight: barbellWeight });
+      if (workWeight > barbellWeight + 2.5) warmupConfig.push({ reps: '1x5', percentage: 0.55, min: barbellWeight + 1.25 });
+      if (workWeight > barbellWeight + 10) warmupConfig.push({ reps: '1x3', percentage: 0.70, min: barbellWeight + 2.5 });
+      if (workWeight > barbellWeight + 20) warmupConfig.push({ reps: '1x2', percentage: 0.85, min: barbellWeight + 5 });
+    } else if (selectedExercise === 'row') {
+      const firstWarm = Math.max(barbellWeight, workWeight * 0.4, workWeight > 40 ? 30 : barbellWeight);
+      if (workWeight > barbellWeight) {
+        if (firstWarm < workWeight - 2.5) warmupConfig.push({ reps: '1x5', fixedWeight: firstWarm });
+      }
+      if (workWeight > firstWarm + 10 && workWeight > 40) warmupConfig.push({ reps: '1x3', percentage: 0.70, min: firstWarm + 5 });
+    } else if (selectedExercise === 'deadlift') {
+      workSetStructure = '1x5';
+      const firstWarm = Math.max(barbellWeight, workWeight * 0.4, workWeight > 60 ? 40 : barbellWeight);
+      if (workWeight > barbellWeight) {
+        if (firstWarm < workWeight - 5) warmupConfig.push({ reps: '1x5', fixedWeight: firstWarm });
+      }
+      if (workWeight > firstWarm + 15 && workWeight > 60) warmupConfig.push({ reps: '1x3', percentage: 0.65, min: firstWarm + 10 });
+      if (workWeight > firstWarm + 30 && workWeight > 80) warmupConfig.push({ reps: '1x2', percentage: 0.80, min: firstWarm + 20 });
+    } else if (selectedExercise === 'close_grip_bench') {
+      workSetStructure = '2x10';
+      // No warmup sets configured
     }
 
-    let results = [];
-    let currentBar = {};
+    const sets = [];
+    warmupConfig.forEach(cfg => {
+      let target = (cfg.fixedWeight !== undefined) ? cfg.fixedWeight : (workWeight * cfg.percentage);
+      if (cfg.min !== undefined) target = Math.max(target, cfg.min);
+      target = Math.max(barbellWeight, target);
+      target = Math.min(target, workWeight - 0.5);
+      if (target < barbellWeight + 0.1 && cfg.fixedWeight === undefined) return;
 
-    config.forEach(cfg => {
-        let t = cfg.f || (workWeight * cfg.p);
-        if (cfg.m) t = Math.max(t, cfg.m);
-        t = Math.min(t, workWeight - 0.5);
-        const res = calculateMinimalChange(t, inventory, currentBar);
-        currentBar = res.totalPlates;
-        results.push({ ...res, set: cfg.r, pct: Math.round((res.weight/workWeight)*100)+'%' });
+      const res = calculateOptimalWeight(target, plates);
+      if (res) {
+        sets.push({
+          set: cfg.reps,
+          weight: res.weight,
+          plates: res.platePairs,
+          pct: workWeight > 0 ? Math.round((res.weight / workWeight) * 100) + '%' : ''
+        });
+      }
     });
 
-    const workRes = calculateMinimalChange(workWeight, inventory, currentBar);
-    results.push({ ...workRes, set: structure, pct: 'Work Set' });
-    
-    return results;
+    const workRes = calculateOptimalWeight(workWeight, plates);
+    if (workRes) {
+      sets.push({
+        set: workSetStructure,
+        weight: workRes.weight,
+        plates: workRes.platePairs,
+        pct: 'Work Set'
+      });
+    }
+
+    const finalSets = [];
+    for (let i = 0; i < sets.length; i++) {
+      const curr = sets[i];
+      const prev = finalSets[finalSets.length - 1];
+      if (prev && prev.weight === curr.weight && prev.set === curr.set) continue;
+      if (curr.pct === 'Work Set' && prev && prev.weight === curr.weight && prev.pct !== 'Work Set') {
+        finalSets.pop();
+      }
+      finalSets.push(curr);
+    }
+
+    if (workWeight === barbellWeight && finalSets.length > 1) {
+      return [finalSets[finalSets.length - 1]];
+    }
+    return finalSets;
   }
 
-  function render(sets) {
-    DOM.warmupRegion.innerHTML = '<h2>Warmup & Work Sets</h2>';
+  // ---------- Rendering ----------
+  function renderTable(sets, workWeight) {
+    DOM.warmupRegion.textContent = '';
+    const h2 = document.createElement('h2');
+    h2.textContent = 'Warmup & Work Sets';
+    DOM.warmupRegion.appendChild(h2);
+
     const table = document.createElement('table');
-    table.innerHTML = `<thead><tr><th>Set</th><th>Load</th><th>Add to Bar</th><th>Total per Side</th></tr></thead><tbody></tbody>`;
-    const tbody = table.querySelector('tbody');
+    const thead = document.createElement('thead');
+    const thr = document.createElement('tr');
+    ['Set', 'Weight (kg)', 'Plates (per side)'].forEach(t => {
+      const th = document.createElement('th'); th.textContent = t; thr.appendChild(th);
+    });
+    thead.appendChild(thr); table.appendChild(thead);
 
+    const tbody = document.createElement('tbody');
     sets.forEach(s => {
       const tr = document.createElement('tr');
-      if (s.pct === 'Work Set') tr.classList.add('work-set');
-      
-      const adds = Object.entries(s.additions)
-        .sort((a,b) => parseFloat(b[0]) - parseFloat(a[0]))
-        .map(([w, c]) => `+ ${w}kg × ${c}`)
-        .join('\n') || 'No change';
+      const tdSet = document.createElement('td');
+      const tdW = document.createElement('td');
+      const tdPlates = document.createElement('td');
 
-      const total = Object.entries(s.totalPlates)
-        .filter(([w, c]) => c > 0)
-        .sort((a,b) => parseFloat(b[0]) - parseFloat(a[0]))
-        .map(([w, c]) => `${w}kg × ${c}`)
-        .join('\n') || 'Bar only';
+      tdSet.textContent = s.set + (s.pct ? ` (${s.pct})` : '');
+      tdW.textContent = s.weight.toFixed(1);
 
-      tr.innerHTML = `
-        <td>${s.set}<br><small>(${s.pct})</small></td>
-        <td><strong>${s.weight.toFixed(1)}kg</strong></td>
-        <td><pre class="additions">${adds}</pre></td>
-        <td><pre class="total-plates">${total}</pre></td>
-      `;
+      const pre = document.createElement('pre');
+      pre.textContent = platePairsToLines(s.plates);
+      tdPlates.appendChild(pre);
+
+      tr.appendChild(tdSet); tr.appendChild(tdW); tr.appendChild(tdPlates);
       tbody.appendChild(tr);
     });
+    table.appendChild(tbody);
     DOM.warmupRegion.appendChild(table);
   }
 
-  function update() {
-    const current = parseFloat(DOM.desiredWeightInput.value) || 20;
-    DOM.deloadDisplay.textContent = (current * 0.9).toFixed(1);
-    const inventory = getInventory();
-    
-    const minPlate = inventory.length ? Math.min(...inventory.map(i => i.w)) : 0.5;
-    const step = minPlate * 2;
-    DOM.incBtn.textContent = `+${step} kg`;
-    DOM.decBtn.textContent = `-${step} kg`;
-    DOM.desiredWeightInput.step = step;
-
-    const sets = generateSets(current, inventory);
-    render(sets);
-
-    const plates = {};
-    DOM.plateGrid.querySelectorAll('input').forEach(i => plates[i.dataset.weight] = parseInt(i.value,10) || 0);
-    saveState(DOM.exerciseSelect.value, { lastWeight: current, plates });
+  // ---------- Updates ----------
+  function updateDeload() {
+    const desired = parseFloat(DOM.desiredWeightInput.value) || 0;
+    const deload = Math.max(0, desired * 0.9);
+    DOM.deloadDisplay.textContent = deload.toFixed(1);
   }
 
-  function initUI() {
-    weights.forEach(w => {
-      const div = document.createElement('div');
-      div.className = 'plate-input-item';
-      div.innerHTML = `<label>${w}kg</label><input type="number" min="0" data-weight="${w}" value="0">`;
-      DOM.plateGrid.appendChild(div);
-      div.querySelector('input').addEventListener('input', update);
+  function updateButtonLabels(inc) {
+    DOM.incBtn.textContent = `+${inc} kg`;
+    DOM.decBtn.textContent = `-${inc} kg`;
+    DOM.incBtn.setAttribute('aria-label', `Increase weight by ${inc} kilograms`);
+    DOM.decBtn.setAttribute('aria-label', `Decrease weight by ${inc} kilograms`);
+  }
+
+  function enforcePlateAndStep() {
+    const plates = getSelectedPlates();
+    const inc = smallestPairIncrement(plates);
+    DOM.desiredWeightInput.step = inc.toString();
+    updateButtonLabels(inc);
+
+    if (DOM.desiredWeightInput.value.trim() === '') return;
+
+    let dw = parseFloat(DOM.desiredWeightInput.value) || barbellWeight;
+    const snapped = snapTotalToIncrement(dw, inc);
+    if (Math.abs(snapped - dw) > 1e-9) {
+      DOM.desiredWeightInput.value = snapped.toFixed(1);
+    }
+  }
+
+  function updateAll() {
+    updateDeload();
+    const current = parseFloat(DOM.desiredWeightInput.value);
+
+    if (isNaN(current) || DOM.desiredWeightInput.value.trim() === '') {
+      setStatus(`Enter a valid work set weight (at least ${barbellWeight} kg).`);
+      DOM.warmupRegion.innerHTML = '';
+      return;
+    }
+    if (current < barbellWeight) {
+      setStatus(`Weight must be at least ${barbellWeight} kg (the barbell weight).`);
+      DOM.warmupRegion.innerHTML = '';
+      return;
+    }
+
+    const plates = getSelectedPlates();
+    if (!plates.length && current > barbellWeight) {
+      setStatus('Please select available plates to calculate loads.');
+      DOM.warmupRegion.textContent = '';
+      return;
+    }
+
+    const workRes = calculateOptimalWeight(current, plates);
+    if (workRes === null) {
+      setStatus('Unable to compute load with the selected plates.');
+      DOM.warmupRegion.textContent = '';
+      return;
+    }
+    const delta = workRes.delta;
+    if (Math.abs(delta) > 0.001) {
+      const dir = delta > 0 ? '+' : '−';
+      setStatus(`Achievable work set: ${workRes.weight.toFixed(1)} kg (${dir}${Math.abs(delta).toFixed(1)} kg from target).`);
+    } else {
+      setStatus('');
+    }
+
+    const sets = generateWarmupSets(current, plates);
+    if (!sets.length) {
+      DOM.warmupRegion.textContent = '';
+      setStatus('No warmup sets for this configuration.');
+      return;
+    }
+    renderTable(sets, current);
+  }
+
+  const trigger = () => { enforcePlateAndStep(); updateAll(); saveCurrentExerciseState(); };
+
+  // ---------- State wiring ----------
+  function readPlateCheckboxesToObject() {
+    const obj = {};
+    DOM.plateGrid.querySelectorAll('input[type="checkbox"]').forEach(b => {
+      obj[b.value] = !!b.checked;
     });
-    const state = loadState(DOM.exerciseSelect.value);
-    DOM.desiredWeightInput.value = state.lastWeight.toFixed(1);
-    DOM.plateGrid.querySelectorAll('input').forEach(i => i.value = state.plates[i.dataset.weight] || 0);
-    update();
+    return obj;
   }
 
-  DOM.exerciseSelect.addEventListener('change', () => {
-    const state = loadState(DOM.exerciseSelect.value);
-    DOM.desiredWeightInput.value = state.lastWeight.toFixed(1);
-    DOM.plateGrid.querySelectorAll('input').forEach(i => i.value = state.plates[i.dataset.weight] || 0);
-    update();
-  });
-  DOM.desiredWeightInput.addEventListener('input', debounce(update));
-  
-  DOM.incBtn.addEventListener('click', () => { 
-    const step = parseFloat(DOM.desiredWeightInput.step) || 2.5;
-    DOM.desiredWeightInput.value = (parseFloat(DOM.desiredWeightInput.value) + step).toFixed(1); 
-    update(); 
-  });
-  
-  DOM.decBtn.addEventListener('click', () => { 
-    const step = parseFloat(DOM.desiredWeightInput.step) || 2.5;
-    DOM.desiredWeightInput.value = Math.max(20, parseFloat(DOM.desiredWeightInput.value) - step).toFixed(1); 
-    update(); 
+  function applyPlatesFromObject(platesObj) {
+    DOM.plateGrid.querySelectorAll('input[type="checkbox"]').forEach(b => {
+      b.checked = !!platesObj[b.value];
+    });
+  }
+
+  function loadExerciseState() {
+    const ex = DOM.exerciseSelect.value;
+    const st = loadState(ex);
+    DOM.desiredWeightInput.value = Number(st.lastWeight || 20).toFixed(1);
+    applyPlatesFromObject(st.plates || defaultState().plates);
+  }
+
+  function saveCurrentExerciseState() {
+    const ex = DOM.exerciseSelect.value;
+    const st = {
+      lastWeight: parseFloat(DOM.desiredWeightInput.value) || 20,
+      plates: readPlateCheckboxesToObject()
+    };
+    saveState(ex, st);
+  }
+
+  // ---------- Events ----------
+  DOM.exerciseSelect.addEventListener('change', () => { loadExerciseState(); trigger(); });
+
+  DOM.desiredWeightInput.addEventListener('input', debounce(() => {
+    updateAll();
+    saveCurrentExerciseState();
+  }, 250));
+
+  DOM.desiredWeightInput.addEventListener('change', () => {
+    enforcePlateAndStep();
+    updateAll();
+    saveCurrentExerciseState();
   });
 
-  DOM.selectAllBtn.addEventListener('click', () => { DOM.plateGrid.querySelectorAll('input').forEach(i => i.value = 1); update(); });
-  DOM.resetPlatesBtn.addEventListener('click', () => { DOM.plateGrid.querySelectorAll('input').forEach(i => i.value = 0); update(); });
+  DOM.incBtn.addEventListener('click', () => {
+    const inc = parseFloat(DOM.desiredWeightInput.step) || 0.5;
+    let val = parseFloat(DOM.desiredWeightInput.value) || barbellWeight;
+    val += inc;
+    DOM.desiredWeightInput.value = val.toFixed(1);
+    trigger();
+  });
+  DOM.decBtn.addEventListener('click', () => {
+    const inc = parseFloat(DOM.desiredWeightInput.step) || 0.5;
+    let val = parseFloat(DOM.desiredWeightInput.value) || barbellWeight;
+    val = Math.max(barbellWeight, val - inc);
+    DOM.desiredWeightInput.value = val.toFixed(1);
+    trigger();
+  });
 
-  initUI();
+  DOM.plateGrid.querySelectorAll('input[type="checkbox"]').forEach(b => {
+    b.addEventListener('change', trigger);
+  });
+  DOM.selectAllBtn.addEventListener('click', () => {
+    DOM.plateGrid.querySelectorAll('input[type="checkbox"]').forEach(b => b.checked = true);
+    trigger();
+  });
+  DOM.resetPlatesBtn.addEventListener('click', () => {
+    DOM.plateGrid.querySelectorAll('input[type="checkbox"]').forEach(b => b.checked = false);
+    trigger();
+  });
+
+  // ---------- Init ----------
+  (function init() {
+    exercises.forEach(ex => {
+      if (!localStorage.getItem(keyFor(ex))) {
+        saveState(ex, defaultState());
+      }
+    });
+    loadExerciseState();
+    trigger();
+  })();
 })();
